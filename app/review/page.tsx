@@ -140,7 +140,7 @@ export default function ReviewPage() {
     }
   };
 
-·  const handleForgotClick = () => {
+    const handleForgotClick = () => {
     if (!currentCard) return;
     const newQueue = [...queue];
     const idx = currentCardIndex;
@@ -380,4 +380,5 @@ export default function ReviewPage() {
     </div>
   );
 }
+
 
