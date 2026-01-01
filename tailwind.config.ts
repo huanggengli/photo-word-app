@@ -5,6 +5,8 @@ const config: Config = {
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/**/*.{js,ts,jsx,tsx,mdx}", // 加上这一行保险
+    "./utils/**/*.{js,ts,jsx,tsx,mdx}", // 加上这行，防止动态类名丢失
   ],
   theme: {
     extend: {
