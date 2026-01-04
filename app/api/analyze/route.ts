@@ -139,34 +139,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 解析 JSON 响应
+    // 解析 JSON 响应（先清理 Markdown 代码块）
     let words;
     try {
-      // 尝试提取 JSON 部分（如果响应包含其他文本）
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      const cleanedText = (text || "").replace(/```[a-z]*\n?/gi, '').replace(/\n?```/g, '').trim();
+      // 优先从 cleanedText 中提取 JSON
+      const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         words = JSON.parse(jsonMatch[0]);
       } else {
-        words = JSON.parse(text);
+        // 如果没匹配到，直接尝试解析 cleanedText
+        words = JSON.parse(cleanedText);
       }
     } catch (parseError) {
-      // 如果解析失败，尝试手动提取
       console.error("解析响应失败:", text);
       console.error("解析错误详情:", parseError);
-      
-      // 尝试更宽松的 JSON 提取
+      // 作为兜底，再尝试从原始文本提取
       try {
-        // 移除可能的 markdown 代码块标记
-        const cleanedText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-        const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          words = JSON.parse(jsonMatch[0]);
+        const fallbackMatch = text.match(/\{[\s\S]*\}/);
+        if (fallbackMatch) {
+          words = JSON.parse(fallbackMatch[0]);
         } else {
           throw new Error("无法找到 JSON 格式");
         }
       } catch (retryError) {
         return NextResponse.json(
-          { error: `无法解析AI响应。响应内容: ${text.substring(0, 200)}` },
+          { error: `无法解析AI响应。响应内容: ${text ? text.substring(0, 200) : ""}` },
           { status: 500 }
         );
       }
