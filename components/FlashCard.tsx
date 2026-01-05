@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { speak } from "@/utils/speak";
 
 interface FlashCardProps {
   word: {
@@ -110,27 +111,13 @@ export default function FlashCard({ word, originalImage, onClose, onSave }: Flas
 
   // 发音功能 - 朗读单词
   const speakWord = () => {
-    if ("speechSynthesis" in window) {
-      // 停止当前正在播放的语音
-      speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(word.english);
-      utterance.lang = "en-US";
-      utterance.rate = 0.9;
-      utterance.pitch = 1;
-      speechSynthesis.speak(utterance);
-    }
+    speak(word.english);
   };
 
   // 发音功能 - 朗读例句
   const speakExample = () => {
-    if ("speechSynthesis" in window && example) {
-      // 停止当前正在播放的语音
-      speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(example);
-      utterance.lang = "en-US";
-      utterance.rate = 0.85;
-      utterance.pitch = 1;
-      speechSynthesis.speak(utterance);
+    if (example) {
+      speak(example);
     }
   };
 

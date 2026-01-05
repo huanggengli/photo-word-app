@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { speak } from "@/utils/speak";
 import Image from "next/image";
 import { FlashCardData } from "./FlashCard";
 
@@ -22,25 +23,13 @@ export default function FlashCardViewer({
 
   // 发音功能 - 朗读单词
   const speakWord = () => {
-    if ("speechSynthesis" in window) {
-      speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(cardData.word);
-      utterance.lang = "en-US";
-      utterance.rate = 0.9;
-      utterance.pitch = 1;
-      speechSynthesis.speak(utterance);
-    }
+    speak(cardData.word);
   };
 
   // 发音功能 - 朗读例句
   const speakExample = () => {
-    if ("speechSynthesis" in window && cardData.example) {
-      speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(cardData.example);
-      utterance.lang = "en-US";
-      utterance.rate = 0.85;
-      utterance.pitch = 1;
-      speechSynthesis.speak(utterance);
+    if (cardData.example) {
+      speak(cardData.example);
     }
   };
 
