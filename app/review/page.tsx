@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { speak } from "@/utils/speak";
 import Image from "next/image";
 import Link from "next/link";
 import { FlashCardData } from "@/components/FlashCard";
@@ -46,25 +47,13 @@ export default function ReviewPage() {
 
   // 发音功能 - 朗读单词
   const speakWord = (word: string) => {
-    if ("speechSynthesis" in window) {
-      speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(word);
-      utterance.lang = "en-US";
-      utterance.rate = 0.9;
-      utterance.pitch = 1;
-      speechSynthesis.speak(utterance);
-    }
+    speak(word);
   };
 
   // 发音功能 - 朗读例句
   const speakExample = (example: string) => {
-    if ("speechSynthesis" in window && example) {
-      speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(example);
-      utterance.lang = "en-US";
-      utterance.rate = 0.85;
-      utterance.pitch = 1;
-      speechSynthesis.speak(utterance);
+    if (example) {
+      speak(example);
     }
   };
 
@@ -140,7 +129,7 @@ export default function ReviewPage() {
     }
   };
 
-    const handleForgotClick = () => {
+·  const handleForgotClick = () => {
     if (!currentCard) return;
     const newQueue = [...queue];
     const idx = currentCardIndex;
@@ -380,5 +369,4 @@ export default function ReviewPage() {
     </div>
   );
 }
-
 
