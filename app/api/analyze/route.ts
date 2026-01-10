@@ -139,10 +139,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 解析 JSON 响应（先清理 Markdown 代码块）
-    let words;
-    try {
-      const cleanedText = (text || "").replace(/```[a-z]*\n?/gi, '').replace(/\n?```/g, '').trim();
+    // 解析 JSON 响应（增强版：处理各种 AI 返回格式）
+let words;
+try {
+  let cleanedText = (text || "").trim();
+  
+  // 1. 移除 Markdown 代码块标记 ```json 和 ```
+  cleanedText = cleanedText.replace(/```[a-z]*\n?/gi, '').replace(/\n?```/g, '').trim();
+  
+  // 2. 如果开头是 "json" 单词（没有代码块符号），也移除它
+  cleanedText = cleanedText.replace(/^json\s*/i, '').trim();
+  
+  // 3. 尝试提取 JSON 对象
+  const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    words = JSON.parse(jsonMatch[0]);
+  } else {
+    words = JSON.parse(cleanedText);
+  }
+} catch (parseError) {
+  console.error("解析响应失败:", text);
+  console.error("解析错误详情:", parseError);
+  
+  // 兜底：再尝试一次
+  try {
+    const fallbackMatch = (text || "").match(/\{[\s\S]*\}/);
+    if (fallbackMatch) {
+      words = JSON.parse(fallbackMatch[0]);
+    } else {
+      throw new Error("无法找到 JSON 格式");
+    }
+  } catch (retryError) {
+    return NextResponse.json(
+      { error: `无法解析AI响应。响应内容: ${text ? text.substring(0, 200) : "空"}` },
+      { status: 500 }
+    );
+  }
+};
       // 优先从 cleanedText 中提取 JSON
       const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
