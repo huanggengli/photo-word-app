@@ -324,8 +324,28 @@ export default function FlashCard({ word, originalImage, onClose, onSave }: Flas
           </div>
         </div>
 
-        {/* 操作按钮 */}
-        <div className="mt-6 flex gap-4">
+       {/* 操作按钮 - 固定在卡片下方 */}
+<div className="mt-4 flex gap-3 w-full">
+  <button
+    onClick={(e) => {
+      e.stopPropagation();
+      onClose();
+    }}
+    className="flex-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-bold py-4 px-6 rounded-xl transition-colors text-lg"
+  >
+    ✕ 关闭
+  </button>
+  <button
+    onClick={(e) => {
+      e.stopPropagation();
+      handleSave();
+    }}
+    disabled={!example || (imageSource === "ai" && !aiImage)}
+    className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transform transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-lg"
+  >
+    ❤️ 保存
+  </button>
+</div>
           <button
             onClick={onClose}
             className="flex-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-semibold py-3 px-6 rounded-lg transition-colors"
