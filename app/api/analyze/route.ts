@@ -22,13 +22,16 @@ export async function POST(request: NextRequest) {
     const mimeType = file.type || "image/jpeg";
     const imageUrl = `data:${mimeType};base64,${base64Image}`;
 
-    const prompt = `请分析这张图片，识别出图片中的主要物体（最多5个），并以JSON格式返回结果。
+    const prompt = `分析这张图片，识别图片中的物体，返回JSON格式。
+
 要求：
-1. 返回格式必须是：{"words": [{"english": "英文单词", "chinese": "中文翻译"}]}
-2. 只返回图片中清晰可见的主要物体
-3. 最多返回5个单词
-4. 只返回纯JSON，不要任何其他文字、解释或代码块标记
-5. 确保JSON格式正确，数组元素之间用逗号分隔`;
+1. 返回1到5个物体（图片中有几个就返回几个，可以只返回1个）
+2. 格式必须是：{"words":[{"english":"单词","chinese":"翻译"}]}
+3. 只返回JSON，不要其他任何文字
+4. 不要用代码块包裹
+
+示例：
+{"words":[{"english":"apple","chinese":"苹果"}]}`;
 
     const response = await fetch(apiUrl, {
       method: "POST",
@@ -47,7 +50,7 @@ export async function POST(request: NextRequest) {
             ],
           },
         ],
-        max_tokens: 1000,
+        max_tokens: 500,
       }),
     });
 
@@ -58,89 +61,62 @@ export async function POST(request: NextRequest) {
     const data = await response.json();
     const text = data.choices?.[0]?.message?.content || "";
 
-    // 解析并修复 JSON
-    const words = parseAndFixJSON(text);
+    const words = parseJSON(text);
     
     if (!words) {
-      return NextResponse.json({ error: `无法解析AI响应: ${text.substring(0, 150)}` }, { status: 500 });
+      return NextResponse.json({ error: `无法解析: ${text.substring(0, 100)}` }, { status: 500 });
     }
 
-    if (!words.words || !Array.isArray(words.words)) {
-      return NextResponse.json({ error: "AI返回格式不正确" }, { status: 500 });
-    }
-
-    return NextResponse.json({ words: words.words.slice(0, 5) });
+    return NextResponse.json({ words: words.slice(0, 5) });
 
   } catch (error: any) {
-    return NextResponse.json({ error: `发生错误: ${error.message}` }, { status: 500 });
+    return NextResponse.json({ error: `错误: ${error.message}` }, { status: 500 });
   }
 }
 
-// 解析并修复 JSON 的函数
-function parseAndFixJSON(text: string): any {
+function parseJSON(text: string): any[] | null {
   if (!text) return null;
 
-  // 第一步：清理文本
-  let cleaned = text.trim();
-  
-  // 移除 Markdown 代码块
-  cleaned = cleaned.replace(/```[a-z]*\n?/gi, "").replace(/\n?```/g, "").trim();
-  
-  // 移除开头的 "json" 单词
-  cleaned = cleaned.replace(/^json\s*/i, "").trim();
+  // 清理文本
+  let s = text.trim();
+  s = s.replace(/```json\s*/gi, "");
+  s = s.replace(/```\s*/g, "");
+  s = s.replace(/^json\s*/i, "");
+  s = s.trim();
 
-  // 第二步：尝试直接解析
+  // 尝试解析
   try {
-    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+    const match = s.match(/\{[\s\S]*\}/);
+    if (match) {
+      const obj = JSON.parse(match[0]);
+      if (obj.words && Array.isArray(obj.words)) {
+        return obj.words;
+      }
     }
-  } catch (e) {
-    // 继续尝试修复
-  }
+  } catch (e) {}
 
-  // 第三步：尝试修复常见问题
+  // 修复并重试
   try {
-    let fixed = cleaned;
-    
-    // 提取 JSON 对象
-    const jsonMatch = fixed.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return null;
-    fixed = jsonMatch[0];
+    let fixed = s;
+    const match = fixed.match(/\{[\s\S]*\}/);
+    if (match) {
+      fixed = match[0];
+      fixed = fixed.replace(/\}\s*\{/g, "},{");
+      fixed = fixed.replace(/"\s+"/g, '","');
+      const obj = JSON.parse(fixed);
+      if (obj.words && Array.isArray(obj.words)) {
+        return obj.words;
+      }
+    }
+  } catch (e) {}
 
-    // 修复：对象之间缺少逗号 }{ → },{
-    fixed = fixed.replace(/\}\s*\{/g, "},{");
-    
-    // 修复：数组元素之间缺少逗号 "] [" → "],["
-    fixed = fixed.replace(/\]\s*\[/g, "],[");
-    
-    // 修复：属性之间缺少逗号 "" " → "","
-    fixed = fixed.replace(/"\s+"/g, '","');
-    
-    // 修复：值和键之间缺少逗号 "value" "key" → "value","key"
-    fixed = fixed.replace(/(":\s*"[^"]*")\s+(")/g, '$1,$2');
-    
-    // 修复：对象结尾和下一个对象开头缺少逗号
-    fixed = fixed.replace(/("\s*)\}\s*\{/g, '$1},{');
-
-    return JSON.parse(fixed);
-  } catch (e) {
-    // 继续尝试
-  }
-
-  // 第四步：手动提取单词
+  // 手动提取
   try {
-    const wordMatches = text.matchAll(/"english"\s*:\s*"([^"]+)"\s*,\s*"chinese"\s*:\s*"([^"]+)"/g);
-    const words = [];
-    for (const match of wordMatches) {
-      words.push({ english: match[1], chinese: match[2] });
+    const matches = [...text.matchAll(/"english"\s*:\s*"([^"]+)"\s*,\s*"chinese"\s*:\s*"([^"]+)"/g)];
+    if (matches.length > 0) {
+      return matches.map(m => ({ english: m[1], chinese: m[2] }));
     }
-    if (words.length > 0) {
-      return { words };
-    }
-  } catch (e) {
-    // 放弃
-  }
+  } catch (e) {}
 
   return null;
 }
